@@ -1,7 +1,17 @@
 from pathlib import Path
+
 import numpy as np
-import joblib
 import streamlit as st
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+
+try:
+    import joblib
+except ModuleNotFoundError:
+    joblib = None
 
 
 st.set_page_config(page_title="Iris Flower Classification", page_icon="🌸", layout="wide")
@@ -9,10 +19,30 @@ st.set_page_config(page_title="Iris Flower Classification", page_icon="🌸", la
 
 @st.cache_resource
 def load_model():
+    if joblib is None:
+        raise ModuleNotFoundError(
+            "Paket joblib belum terinstal. Jalankan 'pip install -r requirements.txt' terlebih dahulu."
+        )
+
     model_path = Path(__file__).resolve().parent / "models" / "iris_svc_model.pkl"
-    if not model_path.exists():
-        raise FileNotFoundError(f"Model tidak ditemukan di: {model_path}")
-    return joblib.load(model_path)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if model_path.exists():
+        return joblib.load(model_path)
+
+    iris = load_iris()
+    X_train, _, y_train, _ = train_test_split(
+        iris.data,
+        iris.target,
+        test_size=0.2,
+        random_state=42,
+        stratify=iris.target,
+    )
+
+    model = make_pipeline(StandardScaler(), SVC(probability=True, random_state=42))
+    model.fit(X_train, y_train)
+    joblib.dump(model, model_path)
+    return model
 
 
 class_names = ["Iris Setosa", "Iris Versicolor", "Iris Virginica"]
