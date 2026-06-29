@@ -2,16 +2,25 @@ from pathlib import Path
 
 import numpy as np
 import streamlit as st
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.svm import SVC
+
+try:
+    from sklearn.datasets import load_iris
+    from sklearn.model_selection import train_test_split
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.svm import SVC
+    sklearn_available = True
+    sklearn_error = None
+except ModuleNotFoundError as err:
+    sklearn_available = False
+    sklearn_error = err
 
 try:
     import joblib
+    joblib_available = True
 except ModuleNotFoundError:
     joblib = None
+    joblib_available = False
 
 
 st.set_page_config(page_title="Iris Flower Classification", page_icon="🌸", layout="wide")
@@ -19,7 +28,11 @@ st.set_page_config(page_title="Iris Flower Classification", page_icon="🌸", la
 
 @st.cache_resource
 def load_model():
-    if joblib is None:
+    if not sklearn_available:
+        raise ModuleNotFoundError(
+            "Paket scikit-learn belum terinstal. Jalankan 'pip install -r requirements.txt' terlebih dahulu."
+        )
+    if not joblib_available:
         raise ModuleNotFoundError(
             "Paket joblib belum terinstal. Jalankan 'pip install -r requirements.txt' terlebih dahulu."
         )
@@ -54,13 +67,28 @@ class_names = ["Iris Setosa", "Iris Versicolor", "Iris Virginica"]
 try:
     model = load_model()
     model_ready = True
+    load_error = None
 except Exception as e:
     model = None
     model_ready = False
+    load_error = e
 
 
 st.title("🌸 Iris Flower Classification")
-st.caption("Aplikasi prediksi spesies bunga Iris dengan model SVM")
+if not sklearn_available:
+    st.error(
+        "scikit-learn tidak tersedia di lingkungan saat ini. Pastikan dependency terinstal: `pip install -r requirements.txt`"
+    )
+    if sklearn_error is not None:
+        st.write(f"Detail error: {sklearn_error}")
+elif not joblib_available:
+    st.error(
+        "joblib tidak tersedia di lingkungan saat ini. Pastikan dependency terinstal: `pip install -r requirements.txt`"
+    )
+    if load_error is not None:
+        st.write(f"Detail error: {load_error}")
+else:
+    st.caption("Aplikasi prediksi spesies bunga Iris dengan model SVM")
 
 st.write("Masukkan nilai fitur bunga Iris untuk melihat prediksi spesies yang paling mungkin.")
 
@@ -77,7 +105,7 @@ with st.sidebar:
     if model_ready:
         st.success("Model siap digunakan")
     else:
-        st.warning(f"Model belum bisa dimuat: {e}")
+        st.warning(f"Model belum bisa dimuat: {load_error}")
 
 
 features = np.array([[sepal_length, sepal_width, petal_length, petal_width]], dtype=float)
