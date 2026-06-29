@@ -28,7 +28,10 @@ def load_model():
     model_path.parent.mkdir(parents=True, exist_ok=True)
 
     if model_path.exists():
-        return joblib.load(model_path)
+        try:
+            return joblib.load(model_path)
+        except Exception:
+            model_path.unlink(missing_ok=True)
 
     iris = load_iris()
     X_train, _, y_train, _ = train_test_split(
